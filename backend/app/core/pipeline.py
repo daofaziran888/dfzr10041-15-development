@@ -119,6 +119,97 @@ class IngestPipelineState:
     quality_report: QualityReport | None = None
 
 
+def _pick_attr_or_key(item: Any, *names: str, default: Any = None) -> Any:
+    """同时支持对象属性和字典键的宽松取值。"""
+    for name in names:
+        if isinstance(item, dict):
+            if name in item:
+                return item[name]
+        else:
+            if hasattr(item, name):
+                value = getattr(item, name)
+                if value is not None:
+                    return value
+    return default
+
+
+def normalize_forward_item(item: Any) -> dict[str, Any]:
+    """把 EventRecord / 重算候选对象 / dict 统一成转发负载描述。
+
+    返回字段：candidate_like、passed、eligible、severity、target、payload。
+    """
+    if isinstance(item, EventRecord):
+        severity = ""
+        try:
+            severity = item.event_type.severity or ""
+        except Exception:
+            severity = ""
+        severity = severity or item.enriched_fields.get("severity_level", "")
+        # 保持历史负载的四个键完全不变，避免破坏既有转发契约；
+        # 候选/重算条目的富负载走下面的通用归一逻辑。
+        payload = {
+            "record_id": item.record_id,
+            "event_type": item.event_type.type_id,
+            "parsed_fields": item.parsed_fields,
+            "event_time": item.event_time.isoformat() if item.event_time else "",
+        }
+        return {
+            "candidate_like": False, "passed": None, "eligible": None,
+            "severity": severity, "target": None, "payload": payload,
+        }
+
+    data = item if isinstance(item, dict) else getattr(item, "__dict__", {})
+    get = (lambda k, d=None: data.get(k, d)) if isinstance(data, dict) else (
+        lambda k, d=None: getattr(data, k, d))
+
+    record_id = _pick_attr_or_key(item, "record_id", "item_id", "id")
+    fields = _pick_attr_or_key(item, "parsed_fields", "fields", default={}) or {}
+    enriched = _pick_attr_or_key(item, "enriched_fields", "verified_fields", default={}) or {}
+    raw_line = _pick_attr_or_key(
+        item, "raw_line", "original_line", "original_content", "raw")
+    severity = _pick_attr_or_key(
+        item, "severity_after", "effective_severity", "grade_after",
+        "severity", "severity_level_after", "new_severity", "level_after",
+        default="")
+    if not severity and isinstance(enriched, dict):
+        severity = enriched.get("severity_level", "")
+    event_time = _pick_attr_or_key(item, "event_time", default="")
+    if hasattr(event_time, "isoformat"):
+        event_time = event_time.isoformat()
+    passed = _pick_attr_or_key(item, "passed", "is_passed")
+    eligible = _pick_attr_or_key(item, "eligible", "recalc_eligible", "is_eligible")
+    target = _pick_attr_or_key(item, "target", "forward_target")
+    event_type = _pick_attr_or_key(item, "event_type", "event_type_id", default="")
+
+    candidate_like = any(
+        _pick_attr_or_key(item, name) is not None
+        for name in ("passed", "eligible", "recalc_eligible", "is_passed")
+    )
+    payload = {
+        "record_id": record_id,
+        "item_id": _pick_attr_or_key(item, "item_id", default=record_id),
+        "event_type": event_type,
+        "parsed_fields": fields,
+        "enriched_fields": enriched,
+        "severity": severity,
+        "severity_before": _pick_attr_or_key(item, "severity_before", "grade_before"),
+        "severity_after": _pick_attr_or_key(item, "severity_after", "grade_after",
+                                            default=severity),
+        "source": _pick_attr_or_key(item, "source", "source_id", "source_name"),
+        "raw_line": raw_line,
+        "mapping_version": _pick_attr_or_key(item, "mapping_version", "caliber"),
+        "event_time": event_time or "",
+    }
+    return {
+        "candidate_like": candidate_like,
+        "passed": passed,
+        "eligible": eligible,
+        "severity": severity,
+        "target": target,
+        "payload": payload,
+    }
+
+
 class IngestPipeline:
     """核心采集管道：log_source → parser_rule → ingest_job → event_store。
 
@@ -389,25 +480,68 @@ class IngestPipeline:
                 r.parsed_fields["anomaly_alert"] = "triggered"
         return matched
 
-    def apply_forward_rules(self, records: list[EventRecord],
-                             target: str) -> list[dict[str, Any]]:
+    def apply_forward_rules(
+        self,
+        records: list[Any],
+        target: str | None = None,
+        *,
+        passed_only: bool = False,
+        eligible_only: bool = False,
+        only_passed: bool | None = None,
+        high_only: bool = False,
+        severity: str | None = None,
+        include_failed: bool = False,
+        **_options: Any,
+    ) -> list[dict[str, Any]]:
         """编组转发规则：按目标地址组织事件批次——对应 forward_rule 模块。
 
         返回按目标地址分组的转发批次，供外部消费。
+
+        向后兼容：直接传入 EventRecord 列表且不带过滤参数时，行为与旧版一致，
+        全部记录都会编组。
+
+        候选感知：传入字段映射重算批次产生的候选（RecalcItem / dict 等
+        candidate-like 对象）时，默认剔除显式 ``passed=False`` 的候选，
+        即“apply_forward_rules 消费实际通过的候选”。
+        - passed_only/eligible_only：只转发通过重算资格/确认的候选；
+        - high_only 或 severity="HIGH"：只转发实际分级为 HIGH 的候选，
+          DEBUG 不会进入高警转发包。
         """
+        require_passed = bool(passed_only or eligible_only or only_passed is True)
+        only_high = bool(high_only or (severity or "").upper() == "HIGH")
         batches: dict[str, list[dict[str, Any]]] = {}
-        for record in records:
-            key = target or "default"
-            batches.setdefault(key, []).append({
-                "record_id": record.record_id,
-                "event_type": record.event_type.type_id,
-                "parsed_fields": record.parsed_fields,
-                "event_time": record.event_time.isoformat(),
-            })
+        for item in records:
+            norm = normalize_forward_item(item)
+            candidate_like = norm["candidate_like"]
+
+            if candidate_like and not include_failed and norm.get("passed") is False:
+                # 未实际通过的候选不得进入转发入口。
+                continue
+            if require_passed:
+                if passed_only and not norm.get("passed"):
+                    continue
+                if eligible_only and not norm.get("eligible"):
+                    continue
+                if only_passed is True and not (norm.get("passed") or norm.get("eligible")):
+                    continue
+            if only_high and str(norm.get("severity") or "").upper() != "HIGH":
+                continue
+
+            key = target or norm.get("target") or "default"
+            batches.setdefault(key, []).append(norm["payload"])
         return [
             {"target": k, "count": len(v), "payload": v}
             for k, v in batches.items()
         ]
+
+    def apply_high_alert_forward(
+        self, candidates: list[Any], target: str = "forward://high-alert",
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
+        """高警转发入口：只转发实际通过且实际分级为 HIGH 的候选。"""
+        kwargs.setdefault("passed_only", True)
+        return self.apply_forward_rules(
+            candidates, target, high_only=True, **kwargs)
 
     # ---------- 内部辅助方法 ----------
 

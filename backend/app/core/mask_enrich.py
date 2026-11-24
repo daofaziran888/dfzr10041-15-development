@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from typing import Any
+
 from app.core.models import (
     EventRecord, FieldEnrichRule, MaskMethod, MaskResult, MaskRule,
 )
@@ -141,16 +143,31 @@ class MaskEnrichPipeline:
         每条增强规则按 enrich_source 作为查询键查找 mapping_dict，
         将映射值写入 record.enriched_fields 的 target_field 下。
         未命中映射时使用 default_value。
+
+        依赖链支持：后执行的规则可以读取同一记录上一条增强刚产生的字段
+        （例如先由原始 severity_code 得到中间等级 severity_band，再由
+        severity_band 得到 severity_level）。查询视图由 原始字段 → 脱敏字段
+        （仅补缺）→ 已产生的增强字段 逐层叠加，而不是只向原字段查询。
         """
         enriched: dict[str, str] = {}
+        view: dict[str, Any] = dict(record.parsed_fields or {})
+        for key, value in (record.masked_fields or {}).items():
+            view.setdefault(key, value)
         for rule in sorted(self.enrich_rules, key=lambda r: r.priority):
+            # 显式解析一次来源值，保证链式上游产物可见。
             source_value = (
-                record.parsed_fields.get(rule.enrich_source) or
-                record.masked_fields.get(rule.enrich_source) or ""
+                view.get(rule.enrich_source)
+                or (record.parsed_fields or {}).get(rule.enrich_source)
+                or (record.masked_fields or {}).get(rule.enrich_source)
+                or ""
             )
-            mapped = rule.enrich(record.parsed_fields)
+            lookup = dict(view)
+            lookup[rule.enrich_source] = source_value
+            mapped = rule.enrich(lookup)
             record.enriched_fields[rule.target_field] = mapped
             enriched[rule.target_field] = mapped
+            # 让本条增强的产物立刻成为后续规则可查询的上游字段。
+            view[rule.target_field] = mapped
         return enriched
 
     def process_records(self, records: list[EventRecord]) -> list[EventRecord]:
@@ -215,15 +232,21 @@ class MaskEnrichPipeline:
     def get_mask_results(self) -> list[MaskResult]:
         return list(self._mask_results)
 
-    def _update_severity(self, record: EventRecord):
-        """根据增强后的字段更新事件记录的严重级别。"""
+    def _update_severity(self, record: EventRecord) -> str:
+        """根据增强后的字段更新事件记录的严重级别，并返回生效级别。
+
+        事件分级必须使用 apply_all_enrichments 实际写入的
+        enriched_fields["severity_level"]，不能回查未增强的原字段。
+        """
         enhanced_severity = record.enriched_fields.get("severity_level", "")
         if enhanced_severity == "HIGH":
             record.event_type.severity = "HIGH"
         elif enhanced_severity == "MEDIUM":
             record.event_type.severity = "MEDIUM"
-        elif enhanced_severity == "TRACE":
+        elif enhanced_severity in ("TRACE", "DEBUG"):
+            # TRACE 是映射产生的中间/低层标签，事件分级落到 DEBUG。
             record.event_type.severity = "DEBUG"
+        return record.event_type.severity
 
 
 def make_mask_enrich_pipeline() -> MaskEnrichPipeline:

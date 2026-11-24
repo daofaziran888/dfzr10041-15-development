@@ -1,0 +1,288 @@
+{
+  "stage0_initial_real_levels": {
+    "A": "DEBUG",
+    "B": "DEBUG"
+  },
+  "stage1_first_round_levels": {
+    "A": "HIGH",
+    "B": "DEBUG"
+  },
+  "stage1_receipts": [
+    {
+      "receipt_id": "RCPT-1c36e5b925",
+      "batch_id": "RCL-AB-0001",
+      "source": "A",
+      "source_id": "A",
+      "timestamp": "2026-11-24T16:28:55",
+      "status": "已生效",
+      "verified": true,
+      "effective": true,
+      "applied": true,
+      "mapping_version": "new-A-v2",
+      "version": "new-A-v2",
+      "caliber": "new-A-v2",
+      "level_before": "DEBUG",
+      "level_after": "HIGH",
+      "effective_level": "HIGH",
+      "actual_level": "HIGH",
+      "grade_before": "DEBUG",
+      "grade_after": "HIGH",
+      "severity_before": "DEBUG",
+      "severity_after": "HIGH",
+      "before_severity": "DEBUG",
+      "after_severity": "HIGH",
+      "before_level": "DEBUG",
+      "after_level": "HIGH",
+      "effective_severity": "HIGH",
+      "items_total": 2,
+      "total": 2,
+      "items_eligible": 2,
+      "eligible_count": 2,
+      "items_effective": 2,
+      "effective_count": 2,
+      "high_count": 1,
+      "package_id": "HAP-68ed76933f",
+      "dispatched": 1,
+      "dispatch_count": 1,
+      "send_count": 1,
+      "issues": [],
+      "applied_once": true,
+      "round": 1
+    },
+    {
+      "receipt_id": "RCPT-154eab07e9",
+      "batch_id": "RCL-AB-0001",
+      "source": "B",
+      "source_id": "B",
+      "timestamp": "2026-11-24T16:28:55",
+      "status": "待核",
+      "verified": false,
+      "effective": false,
+      "applied": false,
+      "mapping_version": "old",
+      "version": "old",
+      "caliber": "old",
+      "level_before": "DEBUG",
+      "level_after": "DEBUG",
+      "effective_level": "DEBUG",
+      "actual_level": "DEBUG",
+      "grade_before": "DEBUG",
+      "grade_after": "DEBUG",
+      "severity_before": "DEBUG",
+      "severity_after": "DEBUG",
+      "before_severity": "DEBUG",
+      "after_severity": "DEBUG",
+      "before_level": "DEBUG",
+      "after_level": "DEBUG",
+      "effective_severity": "DEBUG",
+      "items_total": 2,
+      "total": 2,
+      "items_eligible": 1,
+      "eligible_count": 1,
+      "items_effective": 0,
+      "effective_count": 0,
+      "high_count": 0,
+      "package_id": "",
+      "dispatched": 0,
+      "dispatch_count": 0,
+      "send_count": 0,
+      "issues": [
+        "新键 RMAP-B-NEW-CODE2BAND::B-HIGH-9 证据仍待确认"
+      ],
+      "applied_once": true,
+      "round": 1
+    }
+  ],
+  "early_a_package": {
+    "package_id": "HAP-68ed76933f",
+    "raw_lines": [
+      "2026-11-24 10:00:01.101 [chain-exec-7] INFO audit - 合规高危操作待复核 request_id=REQ-CHAIN-001 source=A severity_code=A-HIGH-7"
+    ]
+  },
+  "a_review_ticket": {
+    "ticket_id": "REV-1516953a7f",
+    "officer": "值班员-甲",
+    "raw_line": "2026-11-24 10:00:01.101 [chain-exec-7] INFO audit - 合规高危操作待复核 request_id=REQ-CHAIN-001 source=A severity_code=A-HIGH-7",
+    "severity_after": "HIGH",
+    "fields": {
+      "severity_band": "P1",
+      "severity_level": "HIGH"
+    }
+  },
+  "chain_evidence_before_b": {
+    "ready": false,
+    "blocked_reasons": [
+      "来源 B 的新映射尚未核验生效（当前 待核）"
+    ],
+    "mixed": true
+  },
+  "retry_continuation": {
+    "continued_sources": [
+      "B"
+    ],
+    "a_receipt_object_unchanged": true,
+    "b_status": "已生效"
+  },
+  "concurrent_b": {
+    "workers": 12,
+    "sender_calls_for_a": 1,
+    "sender_calls": 1,
+    "total_sender_calls": 2,
+    "effective_receipts": 1,
+    "b_level": "HIGH",
+    "errors": []
+  },
+  "stage2_final_levels": {
+    "A": "HIGH",
+    "B": "HIGH"
+  },
+  "final_receipts": {
+    "A": {
+      "receipt_id": "RCPT-1c36e5b925",
+      "batch_id": "RCL-AB-0001",
+      "source": "A",
+      "source_id": "A",
+      "timestamp": "2026-11-24T16:28:55",
+      "status": "已生效",
+      "verified": true,
+      "effective": true,
+      "applied": true,
+      "mapping_version": "new-A-v2",
+      "version": "new-A-v2",
+      "caliber": "new-A-v2",
+      "level_before": "DEBUG",
+      "level_after": "HIGH",
+      "effective_level": "HIGH",
+      "actual_level": "HIGH",
+      "grade_before": "DEBUG",
+      "grade_after": "HIGH",
+      "severity_before": "DEBUG",
+      "severity_after": "HIGH",
+      "before_severity": "DEBUG",
+      "after_severity": "HIGH",
+      "before_level": "DEBUG",
+      "after_level": "HIGH",
+      "effective_severity": "HIGH",
+      "items_total": 2,
+      "total": 2,
+      "items_eligible": 2,
+      "eligible_count": 2,
+      "items_effective": 2,
+      "effective_count": 2,
+      "high_count": 1,
+      "package_id": "HAP-68ed76933f",
+      "dispatched": 1,
+      "dispatch_count": 1,
+      "send_count": 1,
+      "issues": [],
+      "applied_once": true,
+      "round": 1
+    },
+    "B": {
+      "receipt_id": "RCPT-1232e8a301",
+      "batch_id": "RCL-AB-0001",
+      "source": "B",
+      "source_id": "B",
+      "timestamp": "2026-11-24T16:28:55",
+      "status": "已生效",
+      "verified": true,
+      "effective": true,
+      "applied": true,
+      "mapping_version": "new-B-v2",
+      "version": "new-B-v2",
+      "caliber": "new-B-v2",
+      "level_before": "DEBUG",
+      "level_after": "HIGH",
+      "effective_level": "HIGH",
+      "actual_level": "HIGH",
+      "grade_before": "DEBUG",
+      "grade_after": "HIGH",
+      "severity_before": "DEBUG",
+      "severity_after": "HIGH",
+      "before_severity": "DEBUG",
+      "after_severity": "HIGH",
+      "before_level": "DEBUG",
+      "after_level": "HIGH",
+      "effective_severity": "HIGH",
+      "items_total": 2,
+      "total": 2,
+      "items_eligible": 2,
+      "eligible_count": 2,
+      "items_effective": 2,
+      "effective_count": 2,
+      "high_count": 1,
+      "package_id": "HAP-77629e7664",
+      "dispatched": 1,
+      "dispatch_count": 1,
+      "send_count": 1,
+      "issues": [],
+      "applied_once": true,
+      "round": 2
+    }
+  },
+  "chain_evidence_after_b": {
+    "ready": true,
+    "caliber": "new",
+    "raw_lines": [
+      "2026-11-24 10:00:01.101 [chain-exec-7] INFO audit - 合规高危操作待复核 request_id=REQ-CHAIN-001 source=A severity_code=A-HIGH-7",
+      "2026-11-24 10:00:01.303 [chain-exec-9] INFO audit - 合规高危操作下游确认 request_id=REQ-CHAIN-001 source=B severity_code=B-HIGH-9"
+    ],
+    "sides": {
+      "A": {
+        "item_id": "REC-A-0001",
+        "raw_line": "2026-11-24 10:00:01.101 [chain-exec-7] INFO audit - 合规高危操作待复核 request_id=REQ-CHAIN-001 source=A severity_code=A-HIGH-7",
+        "severity_before": "DEBUG",
+        "severity_after": "HIGH",
+        "mapping_version": "new-A-v2",
+        "enriched_fields": {
+          "severity_band": "P1",
+          "severity_level": "HIGH"
+        }
+      },
+      "B": {
+        "item_id": "REC-B-0001",
+        "raw_line": "2026-11-24 10:00:01.303 [chain-exec-9] INFO audit - 合规高危操作下游确认 request_id=REQ-CHAIN-001 source=B severity_code=B-HIGH-9",
+        "severity_before": "DEBUG",
+        "severity_after": "HIGH",
+        "mapping_version": "new-B-v2",
+        "enriched_fields": {
+          "severity_band": "P1",
+          "severity_level": "HIGH"
+        }
+      }
+    }
+  },
+  "high_alert_packages": [
+    {
+      "package_id": "HAP-68ed76933f",
+      "source": "A",
+      "raw_lines": [
+        "2026-11-24 10:00:01.101 [chain-exec-7] INFO audit - 合规高危操作待复核 request_id=REQ-CHAIN-001 source=A severity_code=A-HIGH-7"
+      ],
+      "count": 1
+    },
+    {
+      "package_id": "HAP-77629e7664",
+      "source": "B",
+      "raw_lines": [
+        "2026-11-24 10:00:01.303 [chain-exec-9] INFO audit - 合规高危操作下游确认 request_id=REQ-CHAIN-001 source=B severity_code=B-HIGH-9"
+      ],
+      "count": 1
+    }
+  ],
+  "debug_leaks_into_high_alert": [],
+  "checks": {
+    "initial_both_debug": true,
+    "first_round_a_high_b_debug": true,
+    "a_package_has_only_high": true,
+    "no_debug_in_high_alert": true,
+    "chain_blocked_before_b": true,
+    "retry_only_b_pending_scope": true,
+    "a_not_reapplied_on_retry": true,
+    "b_dispatch_exactly_once": true,
+    "total_dispatch_two_sources_once_each": true,
+    "concurrent_confirmation_single_dispatch": true,
+    "final_both_high": true,
+    "chain_ready_after_b": true
+  }
+}
